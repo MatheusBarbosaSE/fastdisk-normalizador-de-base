@@ -1,0 +1,31 @@
+# Ambiente virtual
+.venv/
+venv/
+env/
+
+# Python
+__pycache__/
+*.pyc
+*.pyo
+*.egg-info/
+.pytest_cache/
+.mypy_cache/
+.ruff_cache/
+
+# Saídas geradas pelo normalizador (dados de clientes não devem ir para o repositório)
+*_pronta.csv
+*_legenda.txt
+saida_*.csv
+entrada_*.csv
+base_normalizada.csv
+
+# Planilhas de teste locais
+*.xlsx
+*.xls
+!tests/fixtures/*.xlsx
+
+# Editor / sistema operacional
+.vscode/
+.idea/
+.DS_Store
+Thumbs.db
