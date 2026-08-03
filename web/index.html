@@ -1,0 +1,105 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Normalizador de Base — Discadora</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@500;600;700&family=Inter:wght@400;500;600&family=JetBrains+Mono:wght@400;500;600&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="style.css">
+<script src="https://cdnjs.cloudflare.com/ajax/libs/PapaParse/5.4.1/papaparse.min.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
+<!-- A tag module permite a importação de JS em arquivos separados -->
+<script type="module" src="js/app.js"></script>
+</head>
+<body>
+<div class="wrap">
+  <header class="top">
+    <div class="eyebrow"><span class="dot"></span>SUPORTE TÉCNICO · FAST TELECOM</div>
+    <h1>Normalizador de Base para Discadora</h1>
+    <p class="sub">Sobe a planilha do cliente, o sistema identifica Nome, CPF e Telefone(s) automaticamente, valida os números por DDD real e devolve o CSV pronto, sem cabeçalho e separado por ponto e vírgula.</p>
+  </header>
+
+  <div class="panel">
+    <h2>1. Planilha de entrada</h2>
+    <p class="hint">Aceita .csv, .xlsx ou .xls. Com ou sem cabeçalho, o sistema detecta sozinho.</p>
+
+    <div class="dropzone" id="dropzone">
+      <input type="file" id="fileInput" accept=".csv,.xlsx,.xls">
+      <svg class="dz-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5"><path d="M12 3v12m0 0l-4-4m4 4l4-4M4 17v2a2 2 0 002 2h12a2 2 0 002-2v-2" stroke-linecap="round" stroke-linejoin="round"/></svg>
+      <div class="dz-title">Arraste o arquivo aqui ou clique para escolher</div>
+      <div class="dz-sub">.csv · .xlsx · .xls</div>
+      <div class="dz-file" id="dzFile">📄 <span id="dzFileName"></span></div>
+    </div>
+
+    <div id="previewSection" style="display:none;">
+      <div class="section-title" style="margin-top:22px;">Planilha original <span id="previewRowCount" style="color:var(--text-faint);text-transform:none;letter-spacing:0;"></span></div>
+      <p class="hint" style="margin-bottom:12px;">As colunas já detectadas automaticamente aparecem marcadas. Use a letra de qualquer outra coluna no campo abaixo para mantê-la também.</p>
+      <div class="grid-wrap" id="gridWrap">
+        <table class="excel-grid" id="excelGrid"></table>
+      </div>
+    </div>
+
+    <div class="row">
+      <div class="field">
+        <label class="field-label">Colunas extras a manter (opcional: letra da planilha, ex: B ou B,D)</label>
+        <input type="text" id="extrasInput" placeholder="ex: E">
+      </div>
+      <button class="primary" id="processBtn" disabled>Processar base</button>
+    </div>
+
+    <div class="msg" id="msgBox"></div>
+  </div>
+
+  <div id="results">
+    <div class="panel">
+      <h2>2. Resultado</h2>
+      <p class="hint">Confira antes de subir na discadora.</p>
+
+      <div class="stats">
+        <div class="stat"><div class="num" id="statLinhas">–</div><div class="lbl">LINHAS NA BASE FINAL</div></div>
+        <div class="stat"><div class="num" id="statComuns">–</div><div class="lbl">COLUNAS COMUNS</div></div>
+        <div class="stat"><div class="num" id="statTel">–</div><div class="lbl">COLUNAS DE TELEFONE</div></div>
+        <div class="stat"><div class="num" id="statRemovidas">–</div><div class="lbl">LINHAS REMOVIDAS</div></div>
+      </div>
+
+      <div class="section-title">Ordem das colunas no arquivo final</div>
+      <div class="chain" id="chain"></div>
+
+      <div class="section-title">Prévia (5 primeiras linhas)</div>
+      <div class="tbl-wrap"><table id="previewTable"></table></div>
+
+      <div class="download-bar">
+        <button class="primary" id="downloadBtn">⬇ Baixar CSV para a discadora</button>
+        <button class="ghost" id="downloadLegendaBtn">⬇ Baixar legenda (.txt)</button>
+        <span class="fname" id="outFileName"></span>
+      </div>
+
+      <!-- Nova funcionalidade: Divisão da Base -->
+      <hr style="border: 0; height: 1px; background: var(--border); margin: 32px 0 24px;">
+      
+      <div class="section-title">Dividir Base (Opcional)</div>
+      <p class="hint">A base ficou muito grande? Divida o arquivo em partes menores.</p>
+
+      <div class="row" style="align-items: center; margin-top: 12px;">
+        <div class="field" style="max-width: 150px; min-width: 150px;">
+          <label class="field-label">Nº de partes</label>
+          <input type="number" id="splitParts" min="2" value="2">
+        </div>
+        <div class="field">
+          <div style="font-family: 'JetBrains Mono', monospace; font-size: 13px; color: var(--text-dim);" id="splitInfo">
+            –
+          </div>
+        </div>
+      </div>
+
+      <div class="download-bar" id="splitDownloads" style="display: none; margin-top: 20px; flex-wrap: wrap; gap: 10px;">
+        <!-- Botões gerados dinamicamente via split.js -->
+      </div>
+    </div>
+  </div>
+
+  <footer>Normalizador de Base · Uso Interno Fast Telecom</footer>
+</div>
+</body>
+</html>
