@@ -41,10 +41,17 @@
     </div>
 
     <div class="row">
-      <div class="field">
-        <label class="field-label">Colunas extras a manter (opcional: letra da planilha, ex: B ou B,D)</label>
-        <input type="text" id="extrasInput" placeholder="ex: E">
+      <!-- Este campo começa oculto e só aparece se a detecção falhar -->
+      <div class="field" id="telManualWrapper" style="display: none; flex: 0.6;">
+        <label class="field-label" style="color: var(--warn);">Indique a coluna de Telefone (ex: C)</label>
+        <input type="text" id="telManualInput" placeholder="Obrigatório" style="border-color: var(--warn);">
       </div>
+      
+      <div class="field">
+        <label class="field-label">Colunas extras a manter (ex: B,D)</label>
+        <input type="text" id="extrasInput" placeholder="Opcional">
+      </div>
+      
       <button class="primary" id="processBtn" disabled>Processar base</button>
     </div>
 

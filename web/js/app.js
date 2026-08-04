@@ -18,6 +18,10 @@ const splitPartsInput = document.getElementById('splitParts');
 const splitInfo = document.getElementById('splitInfo');
 const splitDownloads = document.getElementById('splitDownloads');
 
+// Elementos do DOM para a seleção manual de telefone
+const telManualWrapper = document.getElementById('telManualWrapper');
+const telManualInput = document.getElementById('telManualInput');
+
 // Estado Global
 let currentFile = null;
 let currentParsed = null;
@@ -92,7 +96,7 @@ function renderPreviewGrid(parsed) {
   colunas.forEach(col => {
     const th = document.createElement('th');
     let det = '';
-    let badge = '—';
+    let badge = '-';
     if (colNome && col.idx === colNome.idx) { det = 'det-nome'; badge = 'Nome'; }
     else if (colCpf && col.idx === colCpf.idx) { det = 'det-cpf'; badge = 'CPF'; }
     else if (telIdx.has(col.idx)) { det = 'det-tel'; badge = 'Telefone'; }
@@ -128,6 +132,16 @@ function renderPreviewGrid(parsed) {
   table.appendChild(tbody);
   document.getElementById('previewRowCount').textContent =
     `· ${dataRows.length} linha${dataRows.length === 1 ? '' : 's'}${dataRows.length > 15 ? ' (mostrando as 15 primeiras)' : ''}${semCabecalho ? ' · sem cabeçalho detectado' : ''}`;
+
+  // Lógica UX: Se não achou telefone, exibe o campo manual
+  if (!colunasTelefone.length) {
+    telManualWrapper.style.display = 'block';
+    showMsg("ℹ Nenhuma coluna de telefone detectada automaticamente. Por favor, indique a letra no campo destacado antes de processar.", "warn");
+  } else {
+    telManualWrapper.style.display = 'none';
+    telManualInput.value = ''; // Limpa caso o usuário suba outra planilha boa na sequência
+  }
+
   document.getElementById('previewSection').style.display = 'block';
 }
 
@@ -149,7 +163,9 @@ processBtn.addEventListener('click', async () => {
   try {
     const { colunas, dataRows, totalLinhasOriginal, semCabecalho } = currentParsed;
     const extrasLetras = extrasInput.value.split(',').map(s => s.trim()).filter(Boolean);
-    const resultado = montarBase(colunas, dataRows, totalLinhasOriginal, semCabecalho, extrasLetras);
+    const telManual = telManualInput.value.trim();
+    
+    const resultado = montarBase(colunas, dataRows, totalLinhasOriginal, semCabecalho, extrasLetras, telManual);
 
     lastResult = resultado;
     renderResultado(resultado);

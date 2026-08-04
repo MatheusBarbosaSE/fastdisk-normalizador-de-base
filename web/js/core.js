@@ -145,7 +145,8 @@ export function processarLinhas(rows) {
   return { colunas, dataRows, totalLinhasOriginal, semCabecalho };
 }
 
-export function montarBase(colunas, dataRows, totalLinhasOriginal, semCabecalho, extrasLetras) {
+// A assinatura recebe o telManual
+export function montarBase(colunas, dataRows, totalLinhasOriginal, semCabecalho, extrasLetras, telManual = "") {
   const jaUsadas = new Set();
   const colNome = selecionarColunaNome(colunas, jaUsadas);
   if (colNome) jaUsadas.add(colNome.idx);
@@ -168,9 +169,26 @@ export function montarBase(colunas, dataRows, totalLinhasOriginal, semCabecalho,
     }
   }
 
-  const colunasTelefone = selecionarColunasTelefone(colunas, jaUsadas);
+  // Lógica que verifica a entrada manual antes de fazer a busca automática
+  let colunasTelefone = [];
+  
+  if (telManual) {
+    // Se o usuário informou uma letra, usa ela diretamente
+    const letra = telManual.toUpperCase();
+    const idx = letraParaIndice(letra);
+    const col = colunas.find(c => c.idx === idx);
+    
+    if (!col) {
+      throw new Error(`A coluna de telefone informada ('${letra}') não existe nesta planilha.`);
+    }
+    colunasTelefone.push(col);
+  } else {
+    // Se não informou, tenta achar sozinho
+    colunasTelefone = selecionarColunasTelefone(colunas, jaUsadas);
+  }
+
   if (!colunasTelefone.length) {
-    throw new Error("Nenhuma coluna de telefone válida foi identificada.");
+    throw new Error("Nenhuma coluna de telefone válida foi detectada. Verifique a planilha ou use a seleção manual.");
   }
   colunasTelefone.forEach(c => jaUsadas.add(c.idx));
 
