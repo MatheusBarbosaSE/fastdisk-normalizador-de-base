@@ -40,6 +40,14 @@ fileInput.addEventListener('change', e => {
   if (e.target.files.length) handleFile(e.target.files[0]);
 });
 
+// Sincroniza o input de texto de colunas extras com os checkboxes da tabela
+extrasInput.addEventListener('input', () => {
+  const valoresDigitados = extrasInput.value.split(',').map(s => s.trim().toUpperCase());
+  document.querySelectorAll('.extra-col-cb').forEach(cb => {
+    cb.checked = valoresDigitados.includes(cb.value);
+  });
+});
+
 async function parseArquivo(file) {
   const buffer = await file.arrayBuffer();
   const ext = file.name.split('.').pop().toLowerCase();
@@ -56,6 +64,7 @@ async function handleFile(file) {
   document.getElementById('previewSection').style.display = 'none';
   processBtn.disabled = true;
   lastOutName = file.name.replace(/\.(csv|xlsx|xls)$/i, "") + "_pronta";
+  extrasInput.value = ''; // Limpa o input ao carregar nova base
 
   try {
     currentParsed = await parseArquivo(file);
@@ -97,13 +106,30 @@ function renderPreviewGrid(parsed) {
     const th = document.createElement('th');
     let det = '';
     let badge = '-';
-    if (colNome && col.idx === colNome.idx) { det = 'det-nome'; badge = 'Nome'; }
-    else if (colCpf && col.idx === colCpf.idx) { det = 'det-cpf'; badge = 'CPF'; }
-    else if (telIdx.has(col.idx)) { det = 'det-tel'; badge = 'Telefone'; }
+    let detectadaAuto = false;
+
+    if (colNome && col.idx === colNome.idx) { det = 'det-nome'; badge = 'Nome'; detectadaAuto = true; }
+    else if (colCpf && col.idx === colCpf.idx) { det = 'det-cpf'; badge = 'CPF'; detectadaAuto = true; }
+    else if (telIdx.has(col.idx)) { det = 'det-tel'; badge = 'Telefone'; detectadaAuto = true; }
 
     const wrap = document.createElement('div');
     wrap.className = 'col-head ' + det;
-    wrap.innerHTML = `<div class="letter">${col.letra}${!semCabecalho ? ' · ' + escapeHtml(String(col.nome)) : ''}</div><span class="badge">${badge}</span>`;
+
+    let conteudoHtml = `<div class="letter">${col.letra}${!semCabecalho ? ' · ' + escapeHtml(String(col.nome)) : ''}</div>`;
+
+    // Renderiza badge se for detectada automaticamente, ou checkbox caso contrário
+    if (detectadaAuto) {
+      conteudoHtml += `<span class="badge">${badge}</span>`;
+    } else {
+      conteudoHtml += `
+        <label class="col-check" title="Adicionar como coluna extra">
+          <input type="checkbox" class="extra-col-cb" value="${col.letra}">
+          <span>Manter</span>
+        </label>
+      `;
+    }
+
+    wrap.innerHTML = conteudoHtml;
     th.appendChild(wrap);
     trHead.appendChild(th);
   });
@@ -133,13 +159,23 @@ function renderPreviewGrid(parsed) {
   document.getElementById('previewRowCount').textContent =
     `· ${dataRows.length} linha${dataRows.length === 1 ? '' : 's'}${dataRows.length > 15 ? ' (mostrando as 15 primeiras)' : ''}${semCabecalho ? ' · sem cabeçalho detectado' : ''}`;
 
+  // Adiciona os listeners para os checkboxes atualizarem o input de texto
+  document.querySelectorAll('.extra-col-cb').forEach(cb => {
+    cb.addEventListener('change', () => {
+      const selecionadas = Array.from(document.querySelectorAll('.extra-col-cb'))
+        .filter(c => c.checked)
+        .map(c => c.value);
+      extrasInput.value = selecionadas.join(',');
+    });
+  });
+
   // Lógica UX: Se não achou telefone, exibe o campo manual
   if (!colunasTelefone.length) {
     telManualWrapper.style.display = 'block';
     showMsg("ℹ Nenhuma coluna de telefone detectada automaticamente. Por favor, indique a letra no campo destacado antes de processar.", "warn");
   } else {
     telManualWrapper.style.display = 'none';
-    telManualInput.value = ''; // Limpa caso o usuário suba outra planilha boa na sequência
+    telManualInput.value = ''; 
   }
 
   document.getElementById('previewSection').style.display = 'block';

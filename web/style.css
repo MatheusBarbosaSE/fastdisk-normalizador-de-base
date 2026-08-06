@@ -151,3 +151,25 @@
     .row{flex-direction:column;align-items:stretch;}
   }
   
+/* Checkboxes das colunas extras */
+  .col-check {
+    display: inline-flex;
+    align-items: center;
+    gap: 5px;
+    margin-top: 5px;
+    cursor: pointer;
+  }
+  .col-check input[type="checkbox"] {
+    margin: 0;
+    cursor: pointer;
+    accent-color: var(--accent);
+  }
+  .col-check span {
+    font-size: 10px;
+    color: var(--text-dim);
+    letter-spacing: .03em;
+  }
+  .col-check:hover span {
+    color: var(--text);
+  }
+  
