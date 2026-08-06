@@ -18,9 +18,9 @@ const splitPartsInput = document.getElementById('splitParts');
 const splitInfo = document.getElementById('splitInfo');
 const splitDownloads = document.getElementById('splitDownloads');
 
-// Elementos do DOM para a seleção manual de telefone
 const telManualWrapper = document.getElementById('telManualWrapper');
 const telManualInput = document.getElementById('telManualInput');
+const concatInput = document.getElementById('concatInput');
 
 // Estado Global
 let currentFile = null;
@@ -48,6 +48,14 @@ extrasInput.addEventListener('input', () => {
   });
 });
 
+// Sincroniza o input de texto de concatenação com os checkboxes da tabela
+concatInput.addEventListener('input', () => {
+  const valoresDigitados = concatInput.value.split(',').map(s => s.trim().toUpperCase());
+  document.querySelectorAll('.concat-col-cb').forEach(cb => {
+    cb.checked = valoresDigitados.includes(cb.value);
+  });
+});
+
 async function parseArquivo(file) {
   const buffer = await file.arrayBuffer();
   const ext = file.name.split('.').pop().toLowerCase();
@@ -64,7 +72,9 @@ async function handleFile(file) {
   document.getElementById('previewSection').style.display = 'none';
   processBtn.disabled = true;
   lastOutName = file.name.replace(/\.(csv|xlsx|xls)$/i, "") + "_pronta";
-  extrasInput.value = ''; // Limpa o input ao carregar nova base
+  
+  extrasInput.value = ''; 
+  concatInput.value = '';
 
   try {
     currentParsed = await parseArquivo(file);
@@ -117,15 +127,30 @@ function renderPreviewGrid(parsed) {
 
     let conteudoHtml = `<div class="letter">${col.letra}${!semCabecalho ? ' · ' + escapeHtml(String(col.nome)) : ''}</div>`;
 
-    // Renderiza badge se for detectada automaticamente, ou checkbox caso contrário
+    // Se detectada auto, mostra a badge e apenas o checkbox de concatenar.
+    // Se não for, mostra os checkboxes de Manter e de Concatenar.
     if (detectadaAuto) {
-      conteudoHtml += `<span class="badge">${badge}</span>`;
+      conteudoHtml += `
+        <div style="display:flex; flex-direction:column; align-items:flex-start; gap:4px; margin-top:3px;">
+          <span class="badge">${badge}</span>
+          <label class="col-check" title="Concatenar esta coluna com outra">
+            <input type="checkbox" class="concat-col-cb" value="${col.letra}">
+            <span>Concatenar</span>
+          </label>
+        </div>
+      `;
     } else {
       conteudoHtml += `
-        <label class="col-check" title="Adicionar como coluna extra">
-          <input type="checkbox" class="extra-col-cb" value="${col.letra}">
-          <span>Manter</span>
-        </label>
+        <div style="display:flex; flex-direction:column; align-items:flex-start; margin-top:3px;">
+          <label class="col-check" title="Adicionar como coluna extra">
+            <input type="checkbox" class="extra-col-cb" value="${col.letra}">
+            <span>Manter</span>
+          </label>
+          <label class="col-check" title="Concatenar esta coluna com outra">
+            <input type="checkbox" class="concat-col-cb" value="${col.letra}">
+            <span>Concatenar</span>
+          </label>
+        </div>
       `;
     }
 
@@ -159,7 +184,7 @@ function renderPreviewGrid(parsed) {
   document.getElementById('previewRowCount').textContent =
     `· ${dataRows.length} linha${dataRows.length === 1 ? '' : 's'}${dataRows.length > 15 ? ' (mostrando as 15 primeiras)' : ''}${semCabecalho ? ' · sem cabeçalho detectado' : ''}`;
 
-  // Adiciona os listeners para os checkboxes atualizarem o input de texto
+  // Listener pros checkboxes de extras
   document.querySelectorAll('.extra-col-cb').forEach(cb => {
     cb.addEventListener('change', () => {
       const selecionadas = Array.from(document.querySelectorAll('.extra-col-cb'))
@@ -169,7 +194,16 @@ function renderPreviewGrid(parsed) {
     });
   });
 
-  // Lógica UX: Se não achou telefone, exibe o campo manual
+  // Listener pros checkboxes de concatenação
+  document.querySelectorAll('.concat-col-cb').forEach(cb => {
+    cb.addEventListener('change', () => {
+      const selecionadas = Array.from(document.querySelectorAll('.concat-col-cb'))
+        .filter(c => c.checked)
+        .map(c => c.value);
+      concatInput.value = selecionadas.join(',');
+    });
+  });
+
   if (!colunasTelefone.length) {
     telManualWrapper.style.display = 'block';
     showMsg("ℹ Nenhuma coluna de telefone detectada automaticamente. Por favor, indique a letra no campo destacado antes de processar.", "warn");
@@ -200,8 +234,9 @@ processBtn.addEventListener('click', async () => {
     const { colunas, dataRows, totalLinhasOriginal, semCabecalho } = currentParsed;
     const extrasLetras = extrasInput.value.split(',').map(s => s.trim()).filter(Boolean);
     const telManual = telManualInput.value.trim();
+    const concatLetras = concatInput.value.trim();
     
-    const resultado = montarBase(colunas, dataRows, totalLinhasOriginal, semCabecalho, extrasLetras, telManual);
+    const resultado = montarBase(colunas, dataRows, totalLinhasOriginal, semCabecalho, extrasLetras, telManual, concatLetras);
 
     lastResult = resultado;
     renderResultado(resultado);
@@ -265,12 +300,10 @@ function renderResultado(r) {
 
   document.getElementById('outFileName').textContent = lastOutName + '.csv';
 
-  // Configuração da divisão de arquivos
   splitPartsInput.value = 2;
   atualizarInfoDivisaoUI();
 }
 
-// Downloads padroes
 document.getElementById('downloadBtn').addEventListener('click', () => {
   if (!lastResult) return;
   const csv = linhasParaCsv(lastResult.linhasFinais);
@@ -289,7 +322,6 @@ document.getElementById('downloadLegendaBtn').addEventListener('click', () => {
   downloadBlob(txt, lastOutName + '_legenda.txt', 'text/plain;charset=utf-8');
 });
 
-// Integração UI com divisão de bases
 function atualizarInfoDivisaoUI() {
   if (!lastResult || !lastResult.linhasFinais.length) return;
 

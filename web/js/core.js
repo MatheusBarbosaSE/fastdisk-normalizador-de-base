@@ -145,21 +145,68 @@ export function processarLinhas(rows) {
   return { colunas, dataRows, totalLinhasOriginal, semCabecalho };
 }
 
-// A assinatura recebe o telManual
-export function montarBase(colunas, dataRows, totalLinhasOriginal, semCabecalho, extrasLetras, telManual = "") {
+// A assinatura agora recebe o parâmetro concatLetras
+export function montarBase(colunas, dataRows, totalLinhasOriginal, semCabecalho, extrasLetras, telManual = "", concatLetras = "") {
   const jaUsadas = new Set();
-  const colNome = selecionarColunaNome(colunas, jaUsadas);
+  
+  // Clona as matrizes para permitir injeção de colunas virtuais sem afetar o estado global da preview
+  let colunasMod = [...colunas];
+  let dataRowsMod = dataRows.map(r => [...r]);
+
+  let colunaConcat = null;
+
+  // Lógica de concatenação dinâmica de colunas
+  if (concatLetras) {
+    const letras = concatLetras.split(',').map(s => s.trim().toUpperCase()).filter(Boolean);
+    if (letras.length > 1) {
+      const indices = letras.map(letra => {
+        const idx = letraParaIndice(letra);
+        if (!colunasMod.find(c => c.idx === idx)) {
+          throw new Error(`A coluna '${letra}' informada para concatenação não existe.`);
+        }
+        return idx;
+      });
+
+      const novoIdx = colunasMod.length;
+      
+      // Concatena os valores com um espaço em branco e injeta na nova coluna da linha
+      dataRowsMod.forEach(row => {
+        const valores = indices.map(idx => (row[idx] !== undefined && row[idx] !== null) ? String(row[idx]).trim() : "");
+        row.push(valores.filter(Boolean).join(" "));
+      });
+
+      // Cria a estrutura da coluna virtual
+      colunaConcat = {
+        idx: novoIdx,
+        letra: `CONCAT(${letras.join('+')})`,
+        nome: "Concatenada",
+        valores: dataRowsMod.map(r => r[novoIdx])
+      };
+      colunasMod.push(colunaConcat);
+    } else if (letras.length === 1) {
+      throw new Error("Para concatenar, informe pelo menos duas letras separadas por vírgula (ex: A,B).");
+    }
+  }
+
+  const colNome = selecionarColunaNome(colunasMod, jaUsadas);
   if (colNome) jaUsadas.add(colNome.idx);
 
-  const colCpf = selecionarColunaCpf(colunas, jaUsadas);
+  const colCpf = selecionarColunaCpf(colunasMod, jaUsadas);
   if (colCpf) jaUsadas.add(colCpf.idx);
 
   const colunasExtras = [];
+  
+  // Força a inclusão da coluna concatenada como extra, se ela foi criada
+  if (colunaConcat) {
+    colunasExtras.push(colunaConcat);
+    jaUsadas.add(colunaConcat.idx);
+  }
+
   for (let letra of extrasLetras) {
     letra = letra.trim().toUpperCase();
     if (!letra) continue;
     const idx = letraParaIndice(letra);
-    const col = colunas.find(c => c.idx === idx);
+    const col = colunasMod.find(c => c.idx === idx);
     if (!col) {
       throw new Error(`A coluna de letra '${letra}' não existe nesta planilha.`);
     }
@@ -169,22 +216,18 @@ export function montarBase(colunas, dataRows, totalLinhasOriginal, semCabecalho,
     }
   }
 
-  // Lógica que verifica a entrada manual antes de fazer a busca automática
   let colunasTelefone = [];
-  
   if (telManual) {
-    // Se o usuário informou uma letra, usa ela diretamente
     const letra = telManual.toUpperCase();
     const idx = letraParaIndice(letra);
-    const col = colunas.find(c => c.idx === idx);
+    const col = colunasMod.find(c => c.idx === idx);
     
     if (!col) {
       throw new Error(`A coluna de telefone informada ('${letra}') não existe nesta planilha.`);
     }
     colunasTelefone.push(col);
   } else {
-    // Se não informou, tenta achar sozinho
-    colunasTelefone = selecionarColunasTelefone(colunas, jaUsadas);
+    colunasTelefone = selecionarColunasTelefone(colunasMod, jaUsadas);
   }
 
   if (!colunasTelefone.length) {
@@ -195,7 +238,7 @@ export function montarBase(colunas, dataRows, totalLinhasOriginal, semCabecalho,
   const colunasComuns = [colNome, colCpf].filter(Boolean).concat(colunasExtras);
   const colunasFinais = colunasComuns.concat(colunasTelefone);
 
-  let linhasFinais = dataRows.map(row => {
+  let linhasFinais = dataRowsMod.map(row => {
     return colunasFinais.map(col => {
       if (colunasTelefone.includes(col)) return normalizarTelefone(row[col.idx]);
       const v = row[col.idx];
@@ -224,7 +267,16 @@ export function montarBase(colunas, dataRows, totalLinhasOriginal, semCabecalho,
   let pos = 1;
   if (colNome) { legenda.push({ posicao: pos++, rotulo: "Nome", original: `${colNome.letra} ("${colNome.nome}")` }); }
   if (colCpf) { legenda.push({ posicao: pos++, rotulo: "CPF", original: `${colCpf.letra} ("${colCpf.nome}")` }); }
-  colunasExtras.forEach(c => { legenda.push({ posicao: pos++, rotulo: "Extra (pedida manualmente)", original: `${c.letra} ("${c.nome}")` }); });
+  
+  colunasExtras.forEach(c => { 
+    const isConcat = c.letra.startsWith('CONCAT');
+    legenda.push({ 
+      posicao: pos++, 
+      rotulo: isConcat ? "Extra (Concatenada)" : "Extra (pedida manualmente)", 
+      original: isConcat ? c.letra : `${c.letra} ("${c.nome}")` 
+    }); 
+  });
+  
   colunasTelefone.forEach((c, i) => { legenda.push({ posicao: pos++, rotulo: `Telefone ${i + 1}`, original: `${c.letra} ("${c.nome}")` }); });
 
   return {
