@@ -40,7 +40,7 @@ fileInput.addEventListener('change', e => {
   if (e.target.files.length) handleFile(e.target.files[0]);
 });
 
-// Sincroniza o input de texto de colunas extras com os checkboxes da tabela
+// Sincroniza inputs de texto com os checkboxes da tabela
 extrasInput.addEventListener('input', () => {
   const valoresDigitados = extrasInput.value.split(',').map(s => s.trim().toUpperCase());
   document.querySelectorAll('.extra-col-cb').forEach(cb => {
@@ -48,10 +48,16 @@ extrasInput.addEventListener('input', () => {
   });
 });
 
-// Sincroniza o input de texto de concatenação com os checkboxes da tabela
 concatInput.addEventListener('input', () => {
   const valoresDigitados = concatInput.value.split(',').map(s => s.trim().toUpperCase());
   document.querySelectorAll('.concat-col-cb').forEach(cb => {
+    cb.checked = valoresDigitados.includes(cb.value);
+  });
+});
+
+telManualInput.addEventListener('input', () => {
+  const valoresDigitados = telManualInput.value.split(',').map(s => s.trim().toUpperCase());
+  document.querySelectorAll('.tel-col-cb').forEach(cb => {
     cb.checked = valoresDigitados.includes(cb.value);
   });
 });
@@ -75,6 +81,7 @@ async function handleFile(file) {
   
   extrasInput.value = ''; 
   concatInput.value = '';
+  telManualInput.value = '';
 
   try {
     currentParsed = await parseArquivo(file);
@@ -127,8 +134,6 @@ function renderPreviewGrid(parsed) {
 
     let conteudoHtml = `<div class="letter">${col.letra}${!semCabecalho ? ' · ' + escapeHtml(String(col.nome)) : ''}</div>`;
 
-    // Se detectada auto, mostra a badge e apenas o checkbox de concatenar.
-    // Se não for, mostra os checkboxes de Manter e de Concatenar.
     if (detectadaAuto) {
       conteudoHtml += `
         <div style="display:flex; flex-direction:column; align-items:flex-start; gap:4px; margin-top:3px;">
@@ -142,6 +147,10 @@ function renderPreviewGrid(parsed) {
     } else {
       conteudoHtml += `
         <div style="display:flex; flex-direction:column; align-items:flex-start; margin-top:3px;">
+          <label class="col-check" title="Definir como coluna de Telefone">
+            <input type="checkbox" class="tel-col-cb" value="${col.letra}">
+            <span>Telefone</span>
+          </label>
           <label class="col-check" title="Adicionar como coluna extra">
             <input type="checkbox" class="extra-col-cb" value="${col.letra}">
             <span>Manter</span>
@@ -184,7 +193,7 @@ function renderPreviewGrid(parsed) {
   document.getElementById('previewRowCount').textContent =
     `· ${dataRows.length} linha${dataRows.length === 1 ? '' : 's'}${dataRows.length > 15 ? ' (mostrando as 15 primeiras)' : ''}${semCabecalho ? ' · sem cabeçalho detectado' : ''}`;
 
-  // Listener pros checkboxes de extras
+  // Listeners dos checkboxes da tabela
   document.querySelectorAll('.extra-col-cb').forEach(cb => {
     cb.addEventListener('change', () => {
       const selecionadas = Array.from(document.querySelectorAll('.extra-col-cb'))
@@ -194,7 +203,6 @@ function renderPreviewGrid(parsed) {
     });
   });
 
-  // Listener pros checkboxes de concatenação
   document.querySelectorAll('.concat-col-cb').forEach(cb => {
     cb.addEventListener('change', () => {
       const selecionadas = Array.from(document.querySelectorAll('.concat-col-cb'))
@@ -204,9 +212,23 @@ function renderPreviewGrid(parsed) {
     });
   });
 
+  document.querySelectorAll('.tel-col-cb').forEach(cb => {
+    cb.addEventListener('change', () => {
+      const selecionadas = Array.from(document.querySelectorAll('.tel-col-cb'))
+        .filter(c => c.checked)
+        .map(c => c.value);
+      telManualInput.value = selecionadas.join(',');
+      
+      // Exibe o campo visualmente caso o usuário esteja marcando o checkbox pela primeira vez
+      if (selecionadas.length > 0) {
+        telManualWrapper.style.display = 'block';
+      }
+    });
+  });
+
   if (!colunasTelefone.length) {
     telManualWrapper.style.display = 'block';
-    showMsg("ℹ Nenhuma coluna de telefone detectada automaticamente. Por favor, indique a letra no campo destacado antes de processar.", "warn");
+    showMsg("ℹ Nenhuma coluna de telefone detectada automaticamente. Marque o checkbox 'Telefone' na tabela ou digite a letra no campo destacado.", "warn");
   } else {
     telManualWrapper.style.display = 'none';
     telManualInput.value = ''; 

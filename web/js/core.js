@@ -145,17 +145,15 @@ export function processarLinhas(rows) {
   return { colunas, dataRows, totalLinhasOriginal, semCabecalho };
 }
 
-// A assinatura agora recebe o parâmetro concatLetras
 export function montarBase(colunas, dataRows, totalLinhasOriginal, semCabecalho, extrasLetras, telManual = "", concatLetras = "") {
   const jaUsadas = new Set();
   
-  // Clona as matrizes para permitir injeção de colunas virtuais sem afetar o estado global da preview
+  // Clona as matrizes para permitir injeção de colunas virtuais
   let colunasMod = [...colunas];
   let dataRowsMod = dataRows.map(r => [...r]);
 
   let colunaConcat = null;
 
-  // Lógica de concatenação dinâmica de colunas
   if (concatLetras) {
     const letras = concatLetras.split(',').map(s => s.trim().toUpperCase()).filter(Boolean);
     if (letras.length > 1) {
@@ -169,13 +167,11 @@ export function montarBase(colunas, dataRows, totalLinhasOriginal, semCabecalho,
 
       const novoIdx = colunasMod.length;
       
-      // Concatena os valores com um espaço em branco e injeta na nova coluna da linha
       dataRowsMod.forEach(row => {
         const valores = indices.map(idx => (row[idx] !== undefined && row[idx] !== null) ? String(row[idx]).trim() : "");
         row.push(valores.filter(Boolean).join(" "));
       });
 
-      // Cria a estrutura da coluna virtual
       colunaConcat = {
         idx: novoIdx,
         letra: `CONCAT(${letras.join('+')})`,
@@ -196,7 +192,6 @@ export function montarBase(colunas, dataRows, totalLinhasOriginal, semCabecalho,
 
   const colunasExtras = [];
   
-  // Força a inclusão da coluna concatenada como extra, se ela foi criada
   if (colunaConcat) {
     colunasExtras.push(colunaConcat);
     jaUsadas.add(colunaConcat.idx);
@@ -218,14 +213,17 @@ export function montarBase(colunas, dataRows, totalLinhasOriginal, semCabecalho,
 
   let colunasTelefone = [];
   if (telManual) {
-    const letra = telManual.toUpperCase();
-    const idx = letraParaIndice(letra);
-    const col = colunasMod.find(c => c.idx === idx);
-    
-    if (!col) {
-      throw new Error(`A coluna de telefone informada ('${letra}') não existe nesta planilha.`);
-    }
-    colunasTelefone.push(col);
+    // Aceita múltiplas colunas manuais de telefone separadas por vírgula
+    const letras = telManual.split(',').map(s => s.trim().toUpperCase()).filter(Boolean);
+    letras.forEach(letra => {
+      const idx = letraParaIndice(letra);
+      const col = colunasMod.find(c => c.idx === idx);
+      
+      if (!col) {
+        throw new Error(`A coluna de telefone informada ('${letra}') não existe nesta planilha.`);
+      }
+      colunasTelefone.push(col);
+    });
   } else {
     colunasTelefone = selecionarColunasTelefone(colunasMod, jaUsadas);
   }
