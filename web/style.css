@@ -173,3 +173,38 @@
     color: var(--text);
   }
   
+/* Controle de visibilidade para o Modo Edição */
+  .advanced-options {
+    display: none;
+    flex-direction: column;
+    gap: 12px;
+    margin-top: 16px;
+    padding-top: 16px;
+    border-top: 1px dashed var(--border);
+  }
+  
+  .advanced-options.active {
+    display: flex;
+  }
+
+  /* Oculta os checkboxes no cabeçalho da tabela por padrão */
+  .col-check {
+    display: none;
+    align-items: center;
+    gap: 5px;
+    margin-top: 5px;
+    cursor: pointer;
+  }
+
+  /* Exibe os checkboxes apenas quando a tabela tiver a classe edit-mode */
+  .excel-grid.edit-mode .col-check {
+    display: inline-flex;
+  }
+
+  .action-bar {
+    display: flex;
+    gap: 12px;
+    margin-top: 20px;
+    align-items: center;
+  }
+  

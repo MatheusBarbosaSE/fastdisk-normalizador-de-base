@@ -23,12 +23,17 @@ const telManualInput = document.getElementById('telManualInput');
 const concatInput = document.getElementById('concatInput');
 const ignorarInput = document.getElementById('ignorarInput');
 
+const actionArea = document.getElementById('actionArea');
+const toggleEditBtn = document.getElementById('toggleEditBtn');
+const advancedOptions = document.getElementById('advancedOptions');
+
 // Estado Global
 let currentFile = null;
 let currentParsed = null;
 let lastResult = null;
 let lastOutName = "base_pronta";
 let ordemConcat = [];
+let isEditMode = false;
 
 // Eventos da Dropzone
 dropzone.addEventListener('click', () => fileInput.click());
@@ -40,6 +45,22 @@ dropzone.addEventListener('drop', e => {
 });
 fileInput.addEventListener('change', e => {
   if (e.target.files.length) handleFile(e.target.files[0]);
+});
+
+// Evento do botão Editar Base
+toggleEditBtn.addEventListener('click', () => {
+  isEditMode = !isEditMode;
+  const table = document.getElementById('excelGrid');
+  
+  if (isEditMode) {
+    advancedOptions.classList.add('active');
+    if (table) table.classList.add('edit-mode');
+    toggleEditBtn.textContent = "❌ Fechar Edição";
+  } else {
+    advancedOptions.classList.remove('active');
+    if (table) table.classList.remove('edit-mode');
+    toggleEditBtn.textContent = "✏️ Editar Base";
+  }
 });
 
 // Sincroniza inputs de texto com os checkboxes da tabela
@@ -87,14 +108,22 @@ async function handleFile(file) {
   hideMsg();
   results.style.display = 'none';
   document.getElementById('previewSection').style.display = 'none';
+  actionArea.style.display = 'none';
   processBtn.disabled = true;
   lastOutName = file.name.replace(/\.(csv|xlsx|xls)$/i, "") + "_pronta";
   
+  // Limpa estados ao carregar nova base
   extrasInput.value = ''; 
   concatInput.value = '';
   telManualInput.value = '';
   ignorarInput.value = '';
   ordemConcat = [];
+  
+  isEditMode = false;
+  advancedOptions.classList.remove('active');
+  const table = document.getElementById('excelGrid');
+  if (table) table.classList.remove('edit-mode');
+  toggleEditBtn.textContent = "✏️ Editar Base";
 
   try {
     currentParsed = await parseArquivo(file);
@@ -124,6 +153,8 @@ function renderPreviewGrid(parsed) {
 
   const table = document.getElementById('excelGrid');
   table.innerHTML = '';
+  // Se já estava no modo edição (ex: upload arrastando um arquivo por cima de outro enquanto editava)
+  if (isEditMode) table.classList.add('edit-mode');
 
   const thead = document.createElement('thead');
   const trHead = document.createElement('tr');
@@ -246,6 +277,8 @@ function renderPreviewGrid(parsed) {
       
       if (selecionadas.length > 0) {
         telManualWrapper.style.display = 'block';
+        // Força a abertura do modo edição para o usuário ver o campo
+        if (!isEditMode) toggleEditBtn.click();
       }
     });
   });
@@ -259,15 +292,17 @@ function renderPreviewGrid(parsed) {
     });
   });
 
+  // Validação proativa de telefone
   if (!colunasTelefone.length) {
     telManualWrapper.style.display = 'block';
-    showMsg("ℹ Nenhuma coluna de telefone detectada automaticamente. Marque o checkbox 'Telefone' na tabela ou digite a letra no campo destacado.", "warn");
+    showMsg("ℹ Nenhuma coluna de telefone detectada. Por favor, clique em 'Editar Base' e indique a coluna manualmente.", "warn");
   } else {
     telManualWrapper.style.display = 'none';
     telManualInput.value = ''; 
   }
 
   document.getElementById('previewSection').style.display = 'block';
+  actionArea.style.display = 'block'; // Mostra os controles após a tabela estar pronta
 }
 
 function showMsg(text, type) {
