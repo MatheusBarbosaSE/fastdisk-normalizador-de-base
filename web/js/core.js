@@ -192,7 +192,8 @@ export function montarBase(colunas, dataRows, totalLinhasOriginal, semCabecalho,
           idx: novoIdx,
           letra: `CONCAT(${letras.join('+')})`,
           nome: "Concatenada",
-          valores: dataRowsMod.map(r => r[novoIdx])
+          valores: dataRowsMod.map(r => r[novoIdx]),
+          letrasOriginais: letras // Guardamos a origem para usar na lógica de telefones
         };
         
         colunasMod.push(colunaVirtual);
@@ -232,8 +233,31 @@ export function montarBase(colunas, dataRows, totalLinhasOriginal, semCabecalho,
 
   let colunasTelefone = [];
   if (telManual) {
-    const letras = telManual.split(',').map(s => s.trim().toUpperCase()).filter(Boolean);
-    letras.forEach(letra => {
+    let letrasTel = telManual.split(',').map(s => s.trim().toUpperCase()).filter(Boolean);
+    
+    // INTERCEPTAÇÃO: Analisa se o usuário concatenou colunas que também foram marcadas como telefone
+    colunasConcat.forEach(cVirtual => {
+      const originais = cVirtual.letrasOriginais;
+      // Se qualquer coluna usada na concatenação estiver na lista de telefones manuais
+      const fazParteDeTelefone = originais.some(l => letrasTel.includes(l));
+      
+      if (fazParteDeTelefone) {
+        // Promove a coluna concatenada a Telefone Oficial
+        colunasTelefone.push(cVirtual);
+        
+        // Remove das colunas extras para não duplicar na saída
+        const idxExtra = colunasExtras.indexOf(cVirtual);
+        if (idxExtra !== -1) {
+          colunasExtras.splice(idxExtra, 1);
+        }
+        
+        // Remove as letras originais da fila para evitar que as colunas separadas apareçam
+        letrasTel = letrasTel.filter(l => !originais.includes(l));
+      }
+    });
+
+    // Processa os telefones manuais restantes (que não sofreram concatenação)
+    letrasTel.forEach(letra => {
       const idx = letraParaIndice(letra);
       const col = colunasMod.find(c => c.idx === idx);
       
@@ -293,7 +317,14 @@ export function montarBase(colunas, dataRows, totalLinhasOriginal, semCabecalho,
     }); 
   });
   
-  colunasTelefone.forEach((c, i) => { legenda.push({ posicao: pos++, rotulo: `Telefone ${i + 1}`, original: `${c.letra} ("${c.nome}")` }); });
+  colunasTelefone.forEach((c, i) => { 
+    const isConcat = c.letra.startsWith('CONCAT');
+    legenda.push({ 
+      posicao: pos++, 
+      rotulo: `Telefone ${i + 1}`, 
+      original: isConcat ? c.letra : `${c.letra} ("${c.nome}")` 
+    }); 
+  });
 
   return {
     linhasFinais,
