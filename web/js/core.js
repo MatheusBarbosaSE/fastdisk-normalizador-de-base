@@ -145,9 +145,22 @@ export function processarLinhas(rows) {
   return { colunas, dataRows, totalLinhasOriginal, semCabecalho };
 }
 
-export function montarBase(colunas, dataRows, totalLinhasOriginal, semCabecalho, extrasLetras, telManual = "", concatLetras = "") {
+export function montarBase(colunas, dataRows, totalLinhasOriginal, semCabecalho, extrasLetras, telManual = "", concatLetras = "", ignorarLetras = "") {
   const jaUsadas = new Set();
   
+  // Registra as colunas ignoradas pelo usuário no conjunto de colunas usadas para pular a detecção automática
+  if (ignorarLetras) {
+    const letrasIgnoradas = ignorarLetras.split(',').map(s => s.trim().toUpperCase()).filter(Boolean);
+    letrasIgnoradas.forEach(letra => {
+      const idx = letraParaIndice(letra);
+      const col = colunas.find(c => c.idx === idx);
+      if (col) {
+        jaUsadas.add(col.idx);
+      }
+    });
+  }
+  
+  // Clona as matrizes para permitir injeção de colunas virtuais
   let colunasMod = [...colunas];
   let dataRowsMod = dataRows.map(r => [...r]);
 

@@ -5,6 +5,7 @@ import {
 
 import { calcularDivisao, baixarPartes } from './split.js';
 
+// Elementos do DOM
 const dropzone = document.getElementById('dropzone');
 const fileInput = document.getElementById('fileInput');
 const dzFile = document.getElementById('dzFile');
@@ -20,13 +21,16 @@ const splitDownloads = document.getElementById('splitDownloads');
 const telManualWrapper = document.getElementById('telManualWrapper');
 const telManualInput = document.getElementById('telManualInput');
 const concatInput = document.getElementById('concatInput');
+const ignorarInput = document.getElementById('ignorarInput');
 
+// Estado Global
 let currentFile = null;
 let currentParsed = null;
 let lastResult = null;
 let lastOutName = "base_pronta";
 let ordemConcat = [];
 
+// Eventos da Dropzone
 dropzone.addEventListener('click', () => fileInput.click());
 dropzone.addEventListener('dragover', e => { e.preventDefault(); dropzone.classList.add('drag'); });
 dropzone.addEventListener('dragleave', () => dropzone.classList.remove('drag'));
@@ -38,6 +42,7 @@ fileInput.addEventListener('change', e => {
   if (e.target.files.length) handleFile(e.target.files[0]);
 });
 
+// Sincroniza inputs de texto com os checkboxes da tabela
 extrasInput.addEventListener('input', () => {
   const valoresDigitados = extrasInput.value.split(',').map(s => s.trim().toUpperCase());
   document.querySelectorAll('.extra-col-cb').forEach(cb => {
@@ -57,6 +62,13 @@ concatInput.addEventListener('input', () => {
 telManualInput.addEventListener('input', () => {
   const valoresDigitados = telManualInput.value.split(',').map(s => s.trim().toUpperCase());
   document.querySelectorAll('.tel-col-cb').forEach(cb => {
+    cb.checked = valoresDigitados.includes(cb.value);
+  });
+});
+
+ignorarInput.addEventListener('input', () => {
+  const valoresDigitados = ignorarInput.value.split(',').map(s => s.trim().toUpperCase());
+  document.querySelectorAll('.ignore-col-cb').forEach(cb => {
     cb.checked = valoresDigitados.includes(cb.value);
   });
 });
@@ -81,6 +93,7 @@ async function handleFile(file) {
   extrasInput.value = ''; 
   concatInput.value = '';
   telManualInput.value = '';
+  ignorarInput.value = '';
   ordemConcat = [];
 
   try {
@@ -138,6 +151,10 @@ function renderPreviewGrid(parsed) {
       conteudoHtml += `
         <div style="display:flex; flex-direction:column; align-items:flex-start; gap:4px; margin-top:3px;">
           <span class="badge">${badge}</span>
+          <label class="col-check" title="Ignorar esta coluna na detecção">
+            <input type="checkbox" class="ignore-col-cb" value="${col.letra}">
+            <span>Ignorar</span>
+          </label>
           <label class="col-check" title="Concatenar esta coluna com outra">
             <input type="checkbox" class="concat-col-cb" value="${col.letra}">
             <span>Concatenar</span>
@@ -154,6 +171,10 @@ function renderPreviewGrid(parsed) {
           <label class="col-check" title="Adicionar como coluna extra">
             <input type="checkbox" class="extra-col-cb" value="${col.letra}">
             <span>Manter</span>
+          </label>
+          <label class="col-check" title="Ignorar esta coluna na detecção">
+            <input type="checkbox" class="ignore-col-cb" value="${col.letra}">
+            <span>Ignorar</span>
           </label>
           <label class="col-check" title="Concatenar esta coluna com outra">
             <input type="checkbox" class="concat-col-cb" value="${col.letra}">
@@ -193,6 +214,7 @@ function renderPreviewGrid(parsed) {
   document.getElementById('previewRowCount').textContent =
     `· ${dataRows.length} linha${dataRows.length === 1 ? '' : 's'}${dataRows.length > 15 ? ' (mostrando as 15 primeiras)' : ''}${semCabecalho ? ' · sem cabeçalho detectado' : ''}`;
 
+  // Listeners dos checkboxes da tabela
   document.querySelectorAll('.extra-col-cb').forEach(cb => {
     cb.addEventListener('change', () => {
       const selecionadas = Array.from(document.querySelectorAll('.extra-col-cb'))
@@ -209,7 +231,6 @@ function renderPreviewGrid(parsed) {
       } else {
         ordemConcat = ordemConcat.filter(v => v !== e.target.value);
       }
-      // Mantemos o que já havia sido digitado após uma vírgula, e atualizamos o primeiro grupo com os clicks
       const partes = concatInput.value.split(',');
       partes[0] = ordemConcat.join('+');
       concatInput.value = partes.join(',').replace(/^,|,$/g, '');
@@ -226,6 +247,15 @@ function renderPreviewGrid(parsed) {
       if (selecionadas.length > 0) {
         telManualWrapper.style.display = 'block';
       }
+    });
+  });
+
+  document.querySelectorAll('.ignore-col-cb').forEach(cb => {
+    cb.addEventListener('change', () => {
+      const selecionadas = Array.from(document.querySelectorAll('.ignore-col-cb'))
+        .filter(c => c.checked)
+        .map(c => c.value);
+      ignorarInput.value = selecionadas.join(',');
     });
   });
 
@@ -260,8 +290,9 @@ processBtn.addEventListener('click', async () => {
     const extrasLetras = extrasInput.value.split(',').map(s => s.trim()).filter(Boolean);
     const telManual = telManualInput.value.trim();
     const concatLetras = concatInput.value.trim();
+    const ignorarLetras = ignorarInput.value.trim();
     
-    const resultado = montarBase(colunas, dataRows, totalLinhasOriginal, semCabecalho, extrasLetras, telManual, concatLetras);
+    const resultado = montarBase(colunas, dataRows, totalLinhasOriginal, semCabecalho, extrasLetras, telManual, concatLetras, ignorarLetras);
 
     lastResult = resultado;
     renderResultado(resultado);
