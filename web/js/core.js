@@ -148,40 +148,46 @@ export function processarLinhas(rows) {
 export function montarBase(colunas, dataRows, totalLinhasOriginal, semCabecalho, extrasLetras, telManual = "", concatLetras = "") {
   const jaUsadas = new Set();
   
-  // Clona as matrizes para permitir injeção de colunas virtuais
   let colunasMod = [...colunas];
   let dataRowsMod = dataRows.map(r => [...r]);
 
-  let colunaConcat = null;
+  const colunasConcat = [];
 
   if (concatLetras) {
-    const letras = concatLetras.split(',').map(s => s.trim().toUpperCase()).filter(Boolean);
-    if (letras.length > 1) {
-      const indices = letras.map(letra => {
-        const idx = letraParaIndice(letra);
-        if (!colunasMod.find(c => c.idx === idx)) {
-          throw new Error(`A coluna '${letra}' informada para concatenação não existe.`);
-        }
-        return idx;
-      });
-
-      const novoIdx = colunasMod.length;
+    const grupos = concatLetras.split(',').map(s => s.trim().toUpperCase()).filter(Boolean);
+    
+    grupos.forEach(grupo => {
+      const letras = grupo.split('+').map(s => s.trim()).filter(Boolean);
       
-      dataRowsMod.forEach(row => {
-        const valores = indices.map(idx => (row[idx] !== undefined && row[idx] !== null) ? String(row[idx]).trim() : "");
-        row.push(valores.filter(Boolean).join(" "));
-      });
+      if (letras.length > 1) {
+        const indices = letras.map(letra => {
+          const idx = letraParaIndice(letra);
+          if (!colunasMod.find(c => c.idx === idx)) {
+            throw new Error(`A coluna '${letra}' informada para concatenação não existe.`);
+          }
+          return idx;
+        });
 
-      colunaConcat = {
-        idx: novoIdx,
-        letra: `CONCAT(${letras.join('+')})`,
-        nome: "Concatenada",
-        valores: dataRowsMod.map(r => r[novoIdx])
-      };
-      colunasMod.push(colunaConcat);
-    } else if (letras.length === 1) {
-      throw new Error("Para concatenar, informe pelo menos duas letras separadas por vírgula (ex: A,B).");
-    }
+        const novoIdx = colunasMod.length;
+        
+        dataRowsMod.forEach(row => {
+          const valores = indices.map(idx => (row[idx] !== undefined && row[idx] !== null) ? String(row[idx]).trim() : "");
+          row.push(valores.filter(Boolean).join(" "));
+        });
+
+        const colunaVirtual = {
+          idx: novoIdx,
+          letra: `CONCAT(${letras.join('+')})`,
+          nome: "Concatenada",
+          valores: dataRowsMod.map(r => r[novoIdx])
+        };
+        
+        colunasMod.push(colunaVirtual);
+        colunasConcat.push(colunaVirtual);
+      } else {
+        throw new Error("Para concatenar, informe as letras separadas por '+' (ex: A+B). Para múltiplos grupos, separe por vírgula (ex: A+B, C+D).");
+      }
+    });
   }
 
   const colNome = selecionarColunaNome(colunasMod, jaUsadas);
@@ -192,10 +198,10 @@ export function montarBase(colunas, dataRows, totalLinhasOriginal, semCabecalho,
 
   const colunasExtras = [];
   
-  if (colunaConcat) {
-    colunasExtras.push(colunaConcat);
-    jaUsadas.add(colunaConcat.idx);
-  }
+  colunasConcat.forEach(c => {
+    colunasExtras.push(c);
+    jaUsadas.add(c.idx);
+  });
 
   for (let letra of extrasLetras) {
     letra = letra.trim().toUpperCase();
@@ -213,7 +219,6 @@ export function montarBase(colunas, dataRows, totalLinhasOriginal, semCabecalho,
 
   let colunasTelefone = [];
   if (telManual) {
-    // Aceita múltiplas colunas manuais de telefone separadas por vírgula
     const letras = telManual.split(',').map(s => s.trim().toUpperCase()).filter(Boolean);
     letras.forEach(letra => {
       const idx = letraParaIndice(letra);
