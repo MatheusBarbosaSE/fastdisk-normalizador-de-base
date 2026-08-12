@@ -25,6 +25,7 @@ const ignorarInput = document.getElementById('ignorarInput');
 
 const actionArea = document.getElementById('actionArea');
 const toggleEditBtn = document.getElementById('toggleEditBtn');
+const resetBtn = document.getElementById('resetBtn');
 const advancedOptions = document.getElementById('advancedOptions');
 
 // Estado Global
@@ -62,6 +63,39 @@ toggleEditBtn.addEventListener('click', () => {
     toggleEditBtn.textContent = "✏️ Editar Base";
   }
 });
+
+// Função para limpar e reiniciar o sistema sem atualizar a página
+function resetApp() {
+  currentFile = null;
+  currentParsed = null;
+  lastResult = null;
+  lastOutName = "base_pronta";
+  ordemConcat = [];
+  
+  // Reseta inputs
+  fileInput.value = '';
+  extrasInput.value = '';
+  concatInput.value = '';
+  telManualInput.value = '';
+  ignorarInput.value = '';
+  
+  // Esconde seções
+  dzFile.style.display = 'none';
+  actionArea.style.display = 'none';
+  document.getElementById('previewSection').style.display = 'none';
+  results.style.display = 'none';
+  hideMsg();
+  
+  // Reseta modo edição
+  isEditMode = false;
+  advancedOptions.classList.remove('active');
+  const table = document.getElementById('excelGrid');
+  if (table) table.classList.remove('edit-mode');
+  toggleEditBtn.textContent = "✏️ Editar Base";
+}
+
+// Evento do botão Nova Planilha
+resetBtn.addEventListener('click', resetApp);
 
 // Sincroniza inputs de texto com os checkboxes da tabela
 extrasInput.addEventListener('input', () => {
@@ -102,28 +136,13 @@ async function parseArquivo(file) {
 }
 
 async function handleFile(file) {
+  resetApp(); // Limpa tudo antes de processar o novo arquivo
+  
   currentFile = file;
   dzFileName.textContent = file.name;
   dzFile.style.display = 'flex';
-  hideMsg();
-  results.style.display = 'none';
-  document.getElementById('previewSection').style.display = 'none';
-  actionArea.style.display = 'none';
   processBtn.disabled = true;
   lastOutName = file.name.replace(/\.(csv|xlsx|xls)$/i, "") + "_pronta";
-  
-  // Limpa estados ao carregar nova base
-  extrasInput.value = ''; 
-  concatInput.value = '';
-  telManualInput.value = '';
-  ignorarInput.value = '';
-  ordemConcat = [];
-  
-  isEditMode = false;
-  advancedOptions.classList.remove('active');
-  const table = document.getElementById('excelGrid');
-  if (table) table.classList.remove('edit-mode');
-  toggleEditBtn.textContent = "✏️ Editar Base";
 
   try {
     currentParsed = await parseArquivo(file);
@@ -153,7 +172,6 @@ function renderPreviewGrid(parsed) {
 
   const table = document.getElementById('excelGrid');
   table.innerHTML = '';
-  // Se já estava no modo edição (ex: upload arrastando um arquivo por cima de outro enquanto editava)
   if (isEditMode) table.classList.add('edit-mode');
 
   const thead = document.createElement('thead');
@@ -277,7 +295,6 @@ function renderPreviewGrid(parsed) {
       
       if (selecionadas.length > 0) {
         telManualWrapper.style.display = 'block';
-        // Força a abertura do modo edição para o usuário ver o campo
         if (!isEditMode) toggleEditBtn.click();
       }
     });
@@ -302,7 +319,7 @@ function renderPreviewGrid(parsed) {
   }
 
   document.getElementById('previewSection').style.display = 'block';
-  actionArea.style.display = 'block'; // Mostra os controles após a tabela estar pronta
+  actionArea.style.display = 'block'; 
 }
 
 function showMsg(text, type) {

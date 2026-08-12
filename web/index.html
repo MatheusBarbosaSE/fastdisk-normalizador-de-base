@@ -45,6 +45,7 @@
       <div class="action-bar">
         <button class="primary" id="processBtn">Processar base</button>
         <button class="ghost" id="toggleEditBtn">✏️ Editar Base</button>
+        <button class="ghost" id="resetBtn">🔄 Nova Planilha</button>
       </div>
 
       <!-- Opções avançadas (Modo Edição) -->
@@ -52,7 +53,7 @@
         <p class="hint" style="margin-bottom: 8px;">Selecione os checkboxes na tabela acima ou digite as letras correspondentes abaixo.</p>
         <div class="row">
           <div class="field">
-            <label class="field-label">Ignorar colunas (ex: B,C)</label>
+            <label class="field-label">Ignorar colunas (tabela ou digite: B,C)</label>
             <input type="text" id="ignorarInput" placeholder="Opcional">
           </div>
           
@@ -62,12 +63,12 @@
           </div>
           
           <div class="field">
-            <label class="field-label">Concatenar (ex: A+B, C+D)</label>
+            <label class="field-label">Concatenar (tabela ou digite: A+B, C+D)</label>
             <input type="text" id="concatInput" placeholder="Opcional">
           </div>
           
           <div class="field">
-            <label class="field-label">Colunas extras a manter (ex: B,D)</label>
+            <label class="field-label">Colunas extras a manter (selecione na tabela ou digite: B,D)</label>
             <input type="text" id="extrasInput" placeholder="Opcional">
           </div>
         </div>
